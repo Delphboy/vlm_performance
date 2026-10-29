@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from PIL import Image
@@ -11,7 +12,7 @@ def load_model():
         model_name,
         device_map="auto"
     )
-    
+
     return processor, model
 
 def caption_image(path, processor, model):
@@ -40,9 +41,19 @@ def caption_image(path, processor, model):
 
 def main():
     processor, model = load_model()
+    results = []
 
     for file in os.listdir('./images'):
-        print(caption_image(os.path.join('./images',file), processor, model))
+        caption = caption_image(os.path.join('./images',file), processor, model)
+        results.append(
+            {
+                "image_id": file,
+                "caption": caption
+            }
+        )
+
+    with open('results.json', 'w', encoding='utf-8') as f:
+        json.dump(results, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     main()
