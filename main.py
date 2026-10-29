@@ -1,3 +1,4 @@
+import os
 import sys
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForMultimodalLM
@@ -10,13 +11,11 @@ def load_model():
         model_name,
         device_map="auto"
     )
-
+    
     return processor, model
 
-def caption_image(path):
+def caption_image(path, processor, model):
     image = Image.open(path)
-
-    processor, model = load_model()
 
     messages = [{
         "role": "user",
@@ -40,7 +39,10 @@ def caption_image(path):
     return caption
 
 def main():
-    print(caption_image(sys.argv[1]))
+    processor, model = load_model()
+
+    for file in os.listdir('./images'):
+        print(caption_image(os.path.join('./images',file), processor, model))
 
 if __name__ == "__main__":
     main()
