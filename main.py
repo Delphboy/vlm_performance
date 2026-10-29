@@ -1,8 +1,8 @@
 import json
 import os
-import sys
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForMultimodalLM
+import urllib.request
 
 def load_model():
     model_name = "google/gemma-4-E2B-it"
@@ -39,15 +39,40 @@ def caption_image(path, processor, model):
 
     return caption
 
+def load_dataset():
+    if not os.path.isfile("dataset_coco.json"):
+        urllib.request.urlretrieve(
+            "https://github.com/Delphboy/karpathy-splits/raw/main/dataset_coco.json",
+            "dataset_coco.json"
+        )
+
+    with open("dataset_coco.json") as f:
+        data = [item for item in json.load(f)["images"] if item["split"] == "test"]
+
+    for item in data:
+        destination = os.path.join('./images', item["filepath"], item["filename"])
+        item["local_path"] = destination
+        if os.path.isfile(destination):
+            continue
+
+        os.makedirs(os.path.dirname(destination), exist_ok=True)
+        urllib.request.urlretrieve(
+            f"http://images.cocodataset.org/{item['filepath']}/{item['filename']}",
+            destination
+        )
+
+    return data
+
 def main():
+    data = load_dataset()
     processor, model = load_model()
     results = []
 
-    for file in os.listdir('./images'):
-        caption = caption_image(os.path.join('./images',file), processor, model)
+    for item in data:
+        caption = caption_image(item["local_path"], processor, model)
         results.append(
             {
-                "image_id": file,
+                "image_id": item["cocoid"],
                 "caption": caption
             }
         )
