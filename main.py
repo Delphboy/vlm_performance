@@ -78,12 +78,15 @@ def load_dataset(split):
         destination = os.path.join('./datasets/coco/img', item["filepath"], item["filename"])
         item["local_path"] = destination
 
-    return [data[0]]
+    return data
 
 def main():
     # Loads the dataset, processor, and model, and initialises the results array
-    data = load_dataset(sys.argv[2])
-    processor, model = load_model(sys.argv[1])
+    model_name = sys.argv[1] if len(sys.argv) > 1 else "google/gemma-4-E2B-it"
+    split_name = sys.argv[2] if len(sys.argv) > 2 else "dataset_coco.json"
+
+    data = load_dataset(split_name)
+    processor, model = load_model(model_name)
     results = []
 
     # Creates results in the coco-captions format
