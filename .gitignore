@@ -219,6 +219,5 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-images/
 results.json
-dataset_coco.json
+datasets/

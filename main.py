@@ -3,19 +3,21 @@ import os
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForMultimodalLM
 import urllib.request
+import zipfile
 
-def load_model():
-    model_name = "google/gemma-4-E2B-it"
-
+def load_model(model_name):
+    # Loads the model from Hugging Face according to the argument
     processor = AutoProcessor.from_pretrained(model_name)
     model = AutoModelForMultimodalLM.from_pretrained(
         model_name,
         device_map="auto"
     )
 
+    print("Loaded processor and model")
     return processor, model
 
 def caption_image(path, processor, model):
+    # Queries a model to create a caption for an image at a given path
     image = Image.open(path)
 
     messages = [{
@@ -40,34 +42,49 @@ def caption_image(path, processor, model):
     return caption
 
 def load_dataset():
-    if not os.path.isfile("dataset_coco.json"):
+    # Download and unzip the full COCO dataset
+    if not os.path.isdir("datasets/coco/img/val2014"):
+        print("Downloading COCO dataset")
+        os.makedirs("datasets/coco/img", exist_ok=True)
+
         urllib.request.urlretrieve(
-            "https://github.com/Delphboy/karpathy-splits/raw/main/dataset_coco.json",
-            "dataset_coco.json"
+            "http://images.cocodataset.org/zips/val2014.zip",
+            "datasets/coco/img/val2014.zip"
         )
 
-    with open("dataset_coco.json") as f:
+        with zipfile.ZipFile("datasets/coco/val2014.zip", 'r') as zip_ref:
+            zip_ref.extractall("datasets/coco/img")
+
+        os.remove("datasets/coco/img/val2014.zip")
+    print("COCO dataset exists")
+
+    # Download the Karpathy splits
+    if not os.path.isfile("datasets/coco/dataset_coco.json"):
+        print("Downloading Karpathy splits")
+        os.makedirs("datasets/coco", exist_ok=True)
+        urllib.request.urlretrieve(
+            "https://github.com/Delphboy/karpathy-splits/raw/main/dataset_coco.json",
+            "datasets/coco/dataset_coco.json"
+        )
+    print("Karpathy splits exist")
+
+    # Loads each item in the split to an array and adds the local path
+    with open("datasets/coco/dataset_coco.json") as f:
         data = [item for item in json.load(f)["images"] if item["split"] == "test"]
 
     for item in data:
-        destination = os.path.join('./images', item["filepath"], item["filename"])
+        destination = os.path.join('./datasets/coco/img', item["filepath"], item["filename"])
         item["local_path"] = destination
-        if os.path.isfile(destination):
-            continue
-
-        os.makedirs(os.path.dirname(destination), exist_ok=True)
-        urllib.request.urlretrieve(
-            f"http://images.cocodataset.org/{item['filepath']}/{item['filename']}",
-            destination
-        )
 
     return data
 
 def main():
+    # Loads the dataset, processor, and model, and initialises the results array
     data = load_dataset()
-    processor, model = load_model()
+    processor, model = load_model("google/gemma-4-E2B-it")
     results = []
 
+    # Creates results in the coco-captions format
     for item in data:
         caption = caption_image(item["local_path"], processor, model)
         results.append(
@@ -77,8 +94,11 @@ def main():
             }
         )
 
+    # Outputs the results to a JSON file
     with open('results.json', 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
+
+    print("Captions stored in results.json")
 
 if __name__ == "__main__":
     main()
