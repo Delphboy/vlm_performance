@@ -1,5 +1,7 @@
 import json
 import os
+import sys
+
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForMultimodalLM
 import urllib.request
@@ -41,7 +43,7 @@ def caption_image(path, processor, model):
 
     return caption
 
-def load_dataset():
+def load_dataset(split):
     # Download and unzip the full COCO dataset
     if not os.path.isdir("datasets/coco/img/val2014"):
         print("Downloading COCO dataset")
@@ -69,19 +71,19 @@ def load_dataset():
     print("Karpathy splits exist")
 
     # Loads each item in the split to an array and adds the local path
-    with open("datasets/coco/dataset_coco.json") as f:
+    with open(f"datasets/coco/{split}") as f:
         data = [item for item in json.load(f)["images"] if item["split"] == "test"]
 
     for item in data:
         destination = os.path.join('./datasets/coco/img', item["filepath"], item["filename"])
         item["local_path"] = destination
 
-    return data
+    return [data[0]]
 
 def main():
     # Loads the dataset, processor, and model, and initialises the results array
-    data = load_dataset()
-    processor, model = load_model("google/gemma-4-E2B-it")
+    data = load_dataset(sys.argv[2])
+    processor, model = load_model(sys.argv[1])
     results = []
 
     # Creates results in the coco-captions format
