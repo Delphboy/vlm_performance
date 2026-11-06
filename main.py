@@ -54,7 +54,7 @@ def load_dataset(split):
             "datasets/coco/img/val2014.zip"
         )
 
-        with zipfile.ZipFile("datasets/coco/val2014.zip", 'r') as zip_ref:
+        with zipfile.ZipFile("datasets/coco/img/val2014.zip", 'r') as zip_ref:
             zip_ref.extractall("datasets/coco/img")
 
         os.remove("datasets/coco/img/val2014.zip")
