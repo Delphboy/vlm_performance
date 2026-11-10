@@ -3,6 +3,7 @@ import os
 import sys
 
 from PIL import Image
+import torch
 from transformers import AutoProcessor, AutoModelForMultimodalLM
 import urllib.request
 import zipfile
@@ -12,10 +13,10 @@ def load_model(model_name):
     processor = AutoProcessor.from_pretrained(model_name)
     model = AutoModelForMultimodalLM.from_pretrained(
         model_name,
-        device_map="auto"
+        device_map = {"": 0 if torch.cuda.is_available() else "cpu"},
     )
 
-    print("Loaded processor and model")
+    print("Loaded processor and model on device:", model.device)
     return processor, model
 
 def caption_image(path, processor, model):
@@ -90,6 +91,7 @@ def main():
     results = []
 
     # Creates results in the coco-captions format
+    print("Creating captions...")
     for item in data:
         caption = caption_image(item["local_path"], processor, model)
         results.append(
