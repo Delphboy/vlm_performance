@@ -7,6 +7,7 @@ import torch
 from transformers import AutoProcessor, AutoModelForMultimodalLM
 import urllib.request
 import zipfile
+import argparse
 
 def load_model(model_name):
     # Loads the model from Hugging Face according to the argument
@@ -44,49 +45,71 @@ def caption_image(path, processor, model):
 
     return caption
 
-def load_dataset(split):
+def load_dataset(split, dataset_directory):
     # Download and unzip the full COCO dataset
-    if not os.path.isdir("datasets/coco/img/val2014"):
+    if not os.path.isdir(os.path.join(dataset_directory, "img/val2014")):
         print("Downloading COCO dataset")
-        os.makedirs("datasets/coco/img", exist_ok=True)
+        os.makedirs(os.path.join(dataset_directory, "img"), exist_ok=True)
 
         urllib.request.urlretrieve(
             "http://images.cocodataset.org/zips/val2014.zip",
-            "datasets/coco/img/val2014.zip"
+            os.path.join(dataset_directory, "img/val2014.zip")
         )
 
-        with zipfile.ZipFile("datasets/coco/img/val2014.zip", 'r') as zip_ref:
-            zip_ref.extractall("datasets/coco/img")
+        with zipfile.ZipFile(os.path.join(dataset_directory, "img/val2014.zip"), 'r') as zip_ref:
+            zip_ref.extractall(os.path.join(dataset_directory, "img"))
 
-        os.remove("datasets/coco/img/val2014.zip")
+        os.remove(os.path.join(dataset_directory, "img/val2014.zip"))
     print("COCO dataset exists")
 
     # Download the Karpathy splits
-    if not os.path.isfile("datasets/coco/dataset_coco.json"):
+    if not os.path.isfile(os.path.join(dataset_directory, "dataset_coco.json")):
         print("Downloading Karpathy splits")
-        os.makedirs("datasets/coco", exist_ok=True)
+        os.makedirs(dataset_directory, exist_ok=True)
         urllib.request.urlretrieve(
             "https://github.com/Delphboy/karpathy-splits/raw/main/dataset_coco.json",
-            "datasets/coco/dataset_coco.json"
+            os.path.join(dataset_directory, "dataset_coco.json")
         )
     print("Karpathy splits exist")
 
     # Loads each item in the split to an array and adds the local path
-    with open(f"datasets/coco/{split}") as f:
+    with open(os.path.join(dataset_directory, split)) as f:
         data = [item for item in json.load(f)["images"] if item["split"] == "test"]
 
     for item in data:
-        destination = os.path.join('./datasets/coco/img', item["filepath"], item["filename"])
+        destination = os.path.join(dataset_directory, "img", item["filepath"], item["filename"])
         item["local_path"] = destination
 
-    return data
+    return [data[0]]
 
 def main():
-    # Loads the dataset, processor, and model, and initialises the results array
-    model_name = sys.argv[1] if len(sys.argv) > 1 else "google/gemma-4-E2B-it"
-    split_name = sys.argv[2] if len(sys.argv) > 2 else "dataset_coco.json"
+    # Processes arguments
+    parser = argparse.ArgumentParser(prog="vlm-performance")
+    parser.add_argument(
+        "-m",
+        "--model",
+        help="Model name from HuggingFace (defaults to google/gemma-4-E2B-it)",
+        default="google/gemma-4-E2B-it"
+    )
+    parser.add_argument(
+        "-s",
+        "--split",
+        help="Split file name (defaults to dataset_coco.json)",
+        default="dataset_coco.json"
+    )
+    parser.add_argument(
+        "-p",
+        "--path",
+        help="Path of the dataset and split files (defaults to datasets/coco)",
+        default="datasets/coco"
+    )
+    args = parser.parse_args()
+    model_name = args.model
+    split_name = args.split
+    dataset_directory = args.path
 
-    data = load_dataset(split_name)
+    # Loads the dataset, processor, and model, and initialises the results array
+    data = load_dataset(split_name, dataset_directory)
     processor, model = load_model(model_name)
     results = []
 
