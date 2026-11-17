@@ -1,0 +1,8 @@
+Gemma 4 E2B
+Gemma 4 E4B
+SmolVLM2
+Bolt VL 4B
+Bolt VL 9B
+Deepseek OCR 2
+Qwen 3.5 4B
+Qwen 3.5 9B
